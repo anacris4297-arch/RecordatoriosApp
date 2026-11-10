@@ -1,110 +1,200 @@
+
 package com.example.recordatoriosapp
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.recordatoriosapp.screens.ListadoScreen
+import com.example.recordatoriosapp.screens.CrearRecordatorioScreen
 import com.example.recordatoriosapp.ui.theme.RecordatoriosAppTheme
+import com.example.recordatoriosapp.screens.DetalleScreen
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Card
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
         setContent {
             RecordatoriosAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                AplicacionRecordatorios()
             }
         }
     }
 }
 
-
+// Conecta las pantallas de nuestra aplicación
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    // Organiza los elementos verticalmente
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState())
-    )  {
-        Text(text = "Mis recordatorios")
 
-        // Resumen de las tareas
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = "Total de tareas: ${recordatoriosSimulados.size}")
-                Text(text = "Pendientes: ${obtenerPendientes().size}")
-            }
-        }
+fun AplicacionRecordatorios(
+    formularioViewModel: FormularioViewModel = viewModel(),
+    listadoViewModel: ListadoViewModel = viewModel()
+)
+ {
+    // Controla la navegación entre pantallas
+    val navController = rememberNavController()
+
+    // Observa los datos actuales del formulario
+    val estado by formularioViewModel.uiState
+        .collectAsStateWithLifecycle()
 
 
-        // Recorre y muestra los recordatorios simulados
+     // Observa el estado del listado
+     val estadoListado by listadoViewModel.uiState
+         .collectAsStateWithLifecycle()
 
-        recordatoriosSimulados.forEach { recordatorio ->
-            // Creamos una tarjeta para cada recordatorio
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp)
-                ) {
-                    Text(text = recordatorio.titulo)
-                    Text(text = "Categoría: ${recordatorio.categoria.etiqueta}")
+    NavHost(
+        navController = navController,
+        startDestination = "listado",
+        modifier = Modifier.fillMaxSize()
+    ) {
 
-                    Text(
-                        text = "Prioridad: ${recordatorio.prioridad.etiqueta}",
-                        color = when (recordatorio.prioridad) {
-                            Prioridad.Alta -> Color(0xFFC62828)
-                            Prioridad.Media -> Color(0xFFB26A00)
-                            Prioridad.Baja -> Color(0xFF2E7D32)
+
+        // Primera pantalla: listado de recordatorios
+        composable("listado") {
+
+
+            when (val pantalla = estadoListado) {
+
+                // Muestra un indicador mientras carga
+                ListadoUiState.Cargando -> {
+                    CircularProgressIndicator()
+                }
+
+                // Muestra el error y permite reintentar
+                is ListadoUiState.Error -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(pantalla.mensaje)
+
+                        Button(
+                            onClick = {
+                                listadoViewModel.reintentar()
+                            }
+                        ) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+
+                // Muestra el listado o el estado vacío
+                else -> {
+                    val lista = (
+                            pantalla as? ListadoUiState.ConDatos
+                            )?.recordatorios.orEmpty()
+
+                    ListadoScreen(
+                        recordatorios = lista,
+                        onCrearRecordatorio = {
+                            navController.navigate("crear")
+                        },
+                        onRecordatorioClick = { id ->
+                            navController.navigate("detalle/$id")
                         }
                     )
-
-
-                    Text(
-                        text = "Estado: ${recordatorio.estado.etiqueta}",
-                        color = when (recordatorio.estado) {
-                            EstadoRecordatorio.Pendiente -> Color(0xFFE67E22)
-                            EstadoRecordatorio.EnCurso -> Color(0xFF1565C0)
-                            EstadoRecordatorio.Completado -> Color(0xFF2E7D32)
-                        }
-                    )
-
                 }
             }
         }
 
-    }
-}
+        // Tercera pantalla: detalle de un recordatorio
+        composable("detalle/{id}") { entrada ->
+
+            // Obtiene el identificador del recordatorio seleccionado
+            val id = entrada.arguments
+                ?.getString("id")
+                ?.toIntOrNull()
+
+            // Busca el recordatorio en nuestro repositorio
+            val recordatorio = id?.let {
+                RepositorioEnMemoria.buscarPorId(it)
+            }
+
+            // Muestra la pantalla de detalle
+            DetalleScreen(
+                recordatorio = recordatorio,
+                onVolver = {
+                    navController.popBackStack()
+                }
+            )
+        }
 
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RecordatoriosAppTheme {
-        Greeting("Android")
+        // Segunda pantalla: crear un recordatorio
+        composable("crear") {
+
+
+            // Regresa al listado cuando el guardado fue exitoso
+            LaunchedEffect(estado.guardadoExitoso) {
+                if (estado.guardadoExitoso) {
+                    formularioViewModel.reiniciarFormulario()
+                    navController.popBackStack()
+                }
+            }
+
+            Scaffold { innerPadding ->
+
+                CrearRecordatorioScreen(
+                    titulo = estado.titulo,
+                    descripcion = estado.descripcion,
+                    categoria = estado.categoria,
+                    prioridad = estado.prioridad,
+
+                    onTituloChange =
+                        formularioViewModel::onTituloChange,
+
+                    onDescripcionChange =
+                        formularioViewModel::onDescripcionChange,
+
+                    onCategoriaChange =
+                        formularioViewModel::onCategoriaChange,
+
+                    onPrioridadChange =
+                        formularioViewModel::onPrioridadChange,
+
+                    // Conecta el botón con la función de guardado
+                    puedeGuardar = estado.puedeGuardar,
+                    guardando = estado.guardando,
+                    onGuardar = {
+                        formularioViewModel.guardar()
+                    },
+
+                    onCancelar = {
+                        formularioViewModel.reiniciarFormulario()
+                        navController.popBackStack()
+                    },
+
+
+                    errorTitulo = estado.errorTitulo,
+                    errorDescripcion = estado.errorDescripcion,
+                    errorCategoria = estado.errorCategoria,
+                    errorPrioridad = estado.errorPrioridad,
+
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+        }
     }
 }
