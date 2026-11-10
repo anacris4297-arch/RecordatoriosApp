@@ -22,6 +22,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.error
 
 // Pantalla para ingresar los datos de un nuevo recordatorio
 @Composable
@@ -57,41 +59,23 @@ errorPrioridad: String? = null,
 
         Text(text = "Nuevo recordatorio")
 
-        // Campo para ingresar el título
-        OutlinedTextField(
-            value = titulo,
-            onValueChange = onTituloChange,
-            label = { Text("Título") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = errorTitulo != null
+        // Campo reutilizable para el título
+        CampoTextoRecordatorio(
+            etiqueta = "Título",
+            valor = titulo,
+            onValorChange = onTituloChange,
+            mensajeError = errorTitulo,
+            unaLinea = true
         )
 
-        if (errorTitulo != null) {
-            Text(
-                text = errorTitulo,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
-
-        // Campo para ingresar la descripción
-        OutlinedTextField(
-            value = descripcion,
-            onValueChange = onDescripcionChange,
-            label = { Text("Descripción") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            isError = errorDescripcion != null
+        // Campo reutilizable para la descripción
+        CampoTextoRecordatorio(
+            etiqueta = "Descripción",
+            valor = descripcion,
+            onValorChange = onDescripcionChange,
+            mensajeError = errorDescripcion,
+            lineasMinimas = 3
         )
-
-
-        if (errorDescripcion != null) {
-            Text(
-                text = errorDescripcion,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
 
 // Selección de categoría
         Text(text = "Categoría")
@@ -196,4 +180,41 @@ fun CrearRecordatorioPreview() {
 
 
 }
+
+/**
+ * Campo de texto reutilizable para el formulario.
+ * Muestra el mensaje de validación cuando existe un error.
+ */
+@Composable
+fun CampoTextoRecordatorio(
+    etiqueta: String,
+    valor: String,
+    onValorChange: (String) -> Unit,
+    mensajeError: String?,
+    modifier: Modifier = Modifier,
+    unaLinea: Boolean = false,
+    lineasMinimas: Int = 1
+) {
+    OutlinedTextField(
+        value = valor,
+        onValueChange = onValorChange,
+        label = { Text(etiqueta) },
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics {
+                mensajeError?.let { error(it) }
+            },
+        singleLine = unaLinea,
+        minLines = lineasMinimas,
+        isError = mensajeError != null
+    )
+
+    if (mensajeError != null) {
+        Text(
+            text = mensajeError,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
 

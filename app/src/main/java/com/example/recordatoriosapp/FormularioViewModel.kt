@@ -12,7 +12,11 @@ import java.time.LocalDateTime
 
 
 // Administra el estado del formulario de recordatorios
-class FormularioViewModel : ViewModel() {
+
+class FormularioViewModel(
+    private val repositorio: RecordatoriosRepository = RepositorioEnMemoria
+) : ViewModel() {
+
 
     // Estado interno que puede modificarse
     private val _uiState = MutableStateFlow(FormularioUiState())
@@ -73,7 +77,7 @@ class FormularioViewModel : ViewModel() {
             try {
                 // Genera un identificador nuevo
                 val nuevoId = (
-                        RepositorioEnMemoria.recordatorios.value
+                        repositorio.recordatorios.value
                             .maxOfOrNull { it.id } ?: 0
                         ) + 1
 
@@ -89,8 +93,7 @@ class FormularioViewModel : ViewModel() {
                 )
 
                 // Lo agrega al repositorio en memoria
-                RepositorioEnMemoria.agregar(nuevoRecordatorio)
-
+                repositorio.agregar(nuevoRecordatorio)
                 _uiState.update {
                     it.copy(
                         guardando = false,

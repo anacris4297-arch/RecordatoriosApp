@@ -1,6 +1,5 @@
 package com.example.recordatoriosapp.screens
 
-
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,7 +43,7 @@ fun ListadoScreen(
                 )
             }
 
-            // Muestra un mensaje cuando no existen recordatorios
+            // Estado vacío
             if (recordatorios.isEmpty()) {
                 item {
                     Text(
@@ -54,21 +53,37 @@ fun ListadoScreen(
                 }
             }
 
+            // Utiliza el componente reutilizable
             items(recordatorios, key = { it.id }) { recordatorio ->
-                Card(
-                    onClick = { onRecordatorioClick(recordatorio.id) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = recordatorio.titulo)
-                        Text(text = "Categoría: ${recordatorio.categoria.etiqueta}")
-                        Text(text = "Prioridad: ${recordatorio.prioridad.etiqueta}")
-                        Text(text = "Estado: ${recordatorio.estado.etiqueta}")
+                TarjetaRecordatorio(
+                    recordatorio = recordatorio,
+                    onClick = {
+                        onRecordatorioClick(recordatorio.id)
                     }
-                }
+                )
             }
+        }
+    }
+}
+
+// Componente reutilizable para mostrar un recordatorio
+@Composable
+fun TarjetaRecordatorio(
+    recordatorio: Recordatorio,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(recordatorio.titulo)
+            Text("Categoría: ${recordatorio.categoria.etiqueta}")
+            Text("Prioridad: ${recordatorio.prioridad.etiqueta}")
+            Text("Estado: ${recordatorio.estado.etiqueta}")
         }
     }
 }

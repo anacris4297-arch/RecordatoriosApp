@@ -23,7 +23,10 @@ sealed interface ListadoUiState {
 }
 
 // Administra el estado del listado de recordatorios
-class ListadoViewModel : ViewModel() {
+
+class ListadoViewModel(
+    private val repositorio: RecordatoriosRepository = RepositorioEnMemoria
+) : ViewModel() {
 
     private val _uiState =
         MutableStateFlow<ListadoUiState>(ListadoUiState.Cargando)
@@ -34,7 +37,7 @@ class ListadoViewModel : ViewModel() {
     init {
         // Observa los cambios del repositorio
         viewModelScope.launch {
-            RepositorioEnMemoria.recordatorios.collect { lista ->
+            repositorio.recordatorios.collect { lista ->
                 if (_uiState.value !is ListadoUiState.Error) {
                     _uiState.value = if (lista.isEmpty()) {
                         ListadoUiState.Vacio
@@ -50,7 +53,7 @@ class ListadoViewModel : ViewModel() {
     fun reintentar() {
         _uiState.value = ListadoUiState.Cargando
 
-        val lista = RepositorioEnMemoria.recordatorios.value
+        val lista = repositorio.recordatorios.value
 
         _uiState.value = if (lista.isEmpty()) {
             ListadoUiState.Vacio

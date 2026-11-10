@@ -27,6 +27,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import com.example.recordatoriosapp.screens.EstadoListadoScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -67,47 +68,15 @@ fun AplicacionRecordatorios(
         modifier = Modifier.fillMaxSize()
     ) {
 
-
         // Primera pantalla: listado de recordatorios
         composable("listado") {
 
-
             when (val pantalla = estadoListado) {
 
-                // Muestra un indicador mientras carga
-                ListadoUiState.Cargando -> {
-                    CircularProgressIndicator()
-                }
-
-                // Muestra el error y permite reintentar
-                is ListadoUiState.Error -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(pantalla.mensaje)
-
-                        Button(
-                            onClick = {
-                                listadoViewModel.reintentar()
-                            }
-                        ) {
-                            Text("Reintentar")
-                        }
-                    }
-                }
-
-                // Muestra el listado o el estado vacío
-                else -> {
-                    val lista = (
-                            pantalla as? ListadoUiState.ConDatos
-                            )?.recordatorios.orEmpty()
-
+                // Muestra los recordatorios disponibles
+                is ListadoUiState.ConDatos -> {
                     ListadoScreen(
-                        recordatorios = lista,
+                        recordatorios = pantalla.recordatorios,
                         onCrearRecordatorio = {
                             navController.navigate("crear")
                         },
@@ -116,8 +85,22 @@ fun AplicacionRecordatorios(
                         }
                     )
                 }
+
+                // Componente reutilizable para carga, vacío o error
+                else -> {
+                    EstadoListadoScreen(
+                        estado = pantalla,
+                        onReintentar = {
+                            listadoViewModel.reintentar()
+                        },
+                        onCrear = {
+                            navController.navigate("crear")
+                        }
+                    )
+                }
             }
         }
+
 
         // Tercera pantalla: detalle de un recordatorio
         composable("detalle/{id}") { entrada ->
